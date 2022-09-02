@@ -1,3 +1,4 @@
+from constructs import Construct
 from aws_cdk import (
     aws_ec2,
     aws_efs,
@@ -5,12 +6,12 @@ from aws_cdk import (
     aws_lambda,
     aws_s3,
     aws_s3_notifications,
-    core,
+    Duration, RemovalPolicy, Stack
 )
 
-class LambdaDataSyncStack(core.Stack):
-    def __init__(self, app: core.App, id: str, **kwargs) -> None:
-        super().__init__(app, id, **kwargs)
+class LambdaDataSyncStack(Stack):
+    def __init__(self, scope: Construct, id: str, **kwargs) -> None:
+        super().__init__(scope, id, **kwargs)
 
         vpc = aws_ec2.Vpc(self, "vpc", max_azs = 2)
         vpc.add_gateway_endpoint("s3-vpce", service = aws_ec2.GatewayVpcEndpointAwsService.S3)
@@ -21,7 +22,7 @@ class LambdaDataSyncStack(core.Stack):
             lifecycle_policy = aws_efs.LifecyclePolicy.AFTER_14_DAYS,
             performance_mode = aws_efs.PerformanceMode.GENERAL_PURPOSE,
             throughput_mode = aws_efs.ThroughputMode.BURSTING,
-            removal_policy = core.RemovalPolicy.DESTROY
+            removal_policy = RemovalPolicy.DESTROY
         )
 
         # create a new access point from the filesystem
@@ -37,7 +38,7 @@ class LambdaDataSyncStack(core.Stack):
             code = aws_lambda.Code.from_asset("func"),
             handler = "delete_sync.lambda_handler",
             runtime = aws_lambda.Runtime.PYTHON_3_8,
-            timeout = core.Duration.seconds(300),
+            timeout = Duration.seconds(300),
             # mount the access point to /mnt/data in the lambda runtime environment
             filesystem = aws_lambda.FileSystem.from_efs_access_point(fs_ap, "/mnt/data")
         )
@@ -49,7 +50,7 @@ class LambdaDataSyncStack(core.Stack):
             access_control = aws_s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
             encryption = aws_s3.BucketEncryption.S3_MANAGED,
             block_public_access = aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy = core.RemovalPolicy.DESTROY,
+            removal_policy = RemovalPolicy.DESTROY,
             auto_delete_objects = True
         )
 
